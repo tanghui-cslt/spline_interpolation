@@ -4,8 +4,9 @@ using namespace std;
 void scanf_data(double ** &a, double ** &temp_a, double *&b, double * &first_order, double &x, int &n);
 void calc_input_a(double **a, double **temp_a, const int n);
 void calc_input_b(double *b, double **temp_a, double * first_order, const int n);
-void LU_decom(double **a, double *b, const int n);
-void delete_arr(double **a, double **temp_a, double *first_order, double *b);
+double * LU_decom(double **a, double *b, const int n);
+void calc_insert_value(double **temp_a, double *m, double x,const int n );
+void delete_arr(double ** &a, double **& temp_a, double *&first_order, double *&b);
 
 int main()
 {
@@ -15,16 +16,52 @@ int main()
 	double **temp_a = NULL;			//	x,f(x) : 数组
 	double *first_order = NULL;		//	first_order : 固定边界条件
 	double x = 0;					//	待计算的值
+	double *m = NULL;
 
 	//输入数据
 	scanf_data(a, temp_a, b, first_order, x, n);
+
 	//追赶法求解方程组
-	//LU_decom(a, b, n);
+	m = LU_decom(a, b, n);
+
+	//计算插值结果
+	calc_insert_value(temp_a, m, x,n);
+
 	//释放空间
 	delete_arr(a, temp_a,first_order, b);
+	delete[]m;
+
 	getchar();
 	getchar();
 	return 0;
+}
+
+void calc_insert_value(double **temp_a, double *m, double x, const int n)
+{
+	cout << "\n***********计算结果************\n";
+	
+	int i = 0;
+	for ( i = 0; i<n-1; i++)
+	{
+		if (temp_a[0][i] < x && x < temp_a[0][i+1])
+		{
+			break;
+		}
+	}
+	if (i == n-1)
+	{
+		cout << "sorry , I cann't calculate this value!\n";
+		exit(0);
+	}
+	//cout << " i = "<<i << endl;
+
+	double y1 = temp_a[1][i];
+	double y2 = (temp_a[1][i + 1] - temp_a[1][i]) / (temp_a[0][i + 1] - temp_a[0][i]) *(x - temp_a[0][i]);
+	double y3 = (m[i + 1] / 6.0 + m[i] / 3.0)*(temp_a[0][i + 1] - temp_a[0][i])*(x - temp_a[0][i]);
+	double y4 = (m[i] / 2)*(x - temp_a[0][i])*(x - temp_a[0][i]);
+	double y5 = (m[i + 1] - m[i]) / (temp_a[0][i + 1] - temp_a[0][i]) / 6 * pow((x - temp_a[0][i]), 3);
+
+	cout << "ans = "<<y1 + y2 - y3 + y4 + y5;
 }
 void scanf_data(double ** &a, double ** &temp_a, double *&b, double * &first_order, double &x, int &n)
 {
@@ -63,6 +100,12 @@ void scanf_data(double ** &a, double ** &temp_a, double *&b, double * &first_ord
 
 	//计算矩阵的右端项
 	calc_input_b(b, temp_a, first_order, n);
+
+	//for (int i = 0; i < n ; i++)
+	//{
+	//	cout <<"\n" <<b[i] << " ";
+	//}
+	//cout << endl;
 }
 void  calc_input_a(double **a, double **temp_a, const int n)
 {
@@ -77,26 +120,40 @@ void  calc_input_a(double **a, double **temp_a, const int n)
 	a[n - 1][n - 2] = 1;	 a[n - 1][n - 1] = 2;
 	for (size_t i = 1; i < n - 1; i++)
 	{
-		a[i][i - 1] = (temp_a[0][i + 1] - temp_a[0][i]) / (temp_a[0][i + 2] - temp_a[0][i]);
+		a[i][i - 1] = (temp_a[0][i ] - temp_a[0][i-1]) / (temp_a[0][i + 1] - temp_a[0][i-1]);
 		a[i][i] = 2;
-		a[i][i + 1] = (temp_a[0][i + 2] - temp_a[0][i + 1]) / (temp_a[0][i + 2] - temp_a[0][i]);
+		a[i][i + 1] = (temp_a[0][i + 1] - temp_a[0][i]) / (temp_a[0][i + 1] - temp_a[0][i - 1]);
 	}
 
-	for (size_t i = 0; i < n; i++)
-	{
-		for (size_t j = 0; j < n; j++)
-		{
-			cout << a[i][j] << " ";
-		}
-		cout << endl;
-	}
+	//cout << "---------\n";
+	//for (size_t i = 0; i < n; i++)
+	//{
+	//	for (size_t j = 0; j < n; j++)
+	//	{
+	//		cout << a[i][j] << " ";
+	//	}
+	//	cout << endl;
+	//}
 }
 
+// wait 
 void calc_input_b(double *b, double **temp_a, double * first_order, const int n)
 {
+	double temp_forward = 0;
+	double temp_back = (temp_a[1][1] - temp_a[1][0]) / (temp_a[0][1] - temp_a[0][0]);
+	b[0] = 6* (temp_back - first_order[0]) / (temp_a[0][1] - temp_a[0][0]);
+	int i = 0;
+	for ( i = 1; i < n-1; i ++)
+	{
+		temp_forward = temp_back;
+		temp_back = (temp_a[1][i + 1] - temp_a[1][i]) / (temp_a[0][i + 1] - temp_a[0][i]);
+		b[i] = 6 * (temp_back - temp_forward) / (temp_a[0][i + 1] - temp_a[0][i - 1]);
+	}
+
+	b[i] = 6 * ( first_order[1] - temp_back ) / (temp_a[0][i] - temp_a[0][i-1]);
 
 }
-void LU_decom(double **a, double *b, const int n)
+double * LU_decom(double **a, double *b, const int n)
 {
 	double *l = new double[n];
 	double *r = new double[n];
@@ -139,19 +196,15 @@ void LU_decom(double **a, double *b, const int n)
 		else
 			x[i] = (y[i] - f[i] * x[i + 1]) / r[i];
 
-	for (int i = 0; i < n; i++)
-		cout << x[i] << " ";
-	cout << endl;
 
 	delete[] l;
 	delete[] r;
 	delete[] f;
-	delete[] x;
 	delete[] y;
-
+	return x;
 }
 
-void delete_arr(double **a, double **temp_a, double *first_order, double *b)
+void delete_arr(double ** &a, double **& temp_a, double *&first_order, double *&b)
 {
 	delete[]a;
 	delete[]b;
